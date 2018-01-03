@@ -1,0 +1,44 @@
+<html>
+	<head>
+		<!--Import Google Icon Font-->
+		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+		<!--Import materialize.css-->
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css">
+
+		<!--Let browser know website is optimized for mobile-->
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script>
+		<script type="text/javascript" src="static/js/msgpack.min.js"></script>
+		<script type="text/javascript" src="static/js/simple-websockets.js"></script>
+	</head>
+	<body>
+		<div class="container">
+			<div class="row">
+				<div class="col s12 input-field">
+					<code>{"pools": [</code>
+					<textarea id="pools" class="materialize-textarea" style="max-height: 10em; overflow-y: auto;"></textarea>
+					<code>]}</code>
+				</div>
+				<p>
+				<a id="submit" class="waves-effect waves-light btn">Submit</a>
+			</div>
+		</div>
+
+<script>
+var socket = new SimpleWebSocket();
+socket.onopen = function() {
+	$('#submit').click(function() {
+			val = $('#pools').val();
+			val = `{"pools": [${val}]}`;
+			var json = JSON.parse(val);
+			socket.emit('set-pools', JSON.stringify(json));
+	});
+	socket.on('error', function(msg) {
+			console.error(`Server returned error ${msg}`);
+	});
+};
+socket.connect();
+</script>
+	</body>
+</html>
