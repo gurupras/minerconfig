@@ -85,6 +85,7 @@ func (c *Client) HandlePoolInfo(w *websockets.WebsocketClient, data interface{})
 		// Stop current miner if it exists
 		// Overwrite tmpConfigPath file
 		// Start miner with -c tmpConfigPath
+		log.Infof("Received pools from server")
 		if err := ioutil.WriteFile(c.tmpConfigPath, b, 0666); err != nil {
 			log.Errorf("Failed to update config: %v", err)
 			return
@@ -102,6 +103,7 @@ func (c *Client) ResetMiner() error {
 		}
 		c.miner = nil
 	}
+	log.Infof("Starting miner ...")
 	if err := c.StartMiner(); err != nil {
 		return fmt.Errorf("Failed to start miner: %v", err)
 	}
