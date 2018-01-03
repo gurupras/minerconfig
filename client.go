@@ -59,6 +59,7 @@ func NewClient(binaryPath, configPath, webserver string) (*Client, error) {
 	if err := c.Connect(); err != nil {
 		return nil, fmt.Errorf("Failed to connect to webserver: %v", err)
 	}
+	go c.ProcessMessages()
 	return c, nil
 }
 
