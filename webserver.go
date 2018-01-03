@@ -31,19 +31,30 @@ func RunServer(webserverPath string, port int) *stoppablenetlistener.StoppableNe
 	ws.UseEvents = true
 
 	ws.On("get-pools", func(w *websockets.WebsocketClient, data interface{}) {
+		if ws.UseEvents {
+			evt := &websockets.Event{"get-pools", fmt.Sprintf("clientaddr=%v", w.RemoteAddr())}
+			ws.EventChan <- evt
+		}
 		str, _ := json.Marshal(pools)
 		w.Emit("get-pools", str)
 	})
 
 	ws.On("set-pools", func(w *websockets.WebsocketClient, data interface{}) {
 		str := data.(string)
+		status := "unknown"
 		var m map[string][]Pool
 		if err := json.Unmarshal([]byte(str), &m); err != nil {
 			log.Errorf("Failed to set-pools: %v", err)
 			w.Emit("error", fmt.Sprintf("Failed to set-pools: %v", err))
+			status = "failure"
 		} else {
 			pools = m["pools"]
 			log.Infof("Successfully executed set-pools!\n")
+			status = "success"
+		}
+		if ws.UseEvents {
+			evt := &websockets.Event{"set-pools", fmt.Sprintf("clientaddr=%v status=%v", w.RemoteAddr(), status)}
+			ws.EventChan <- evt
 		}
 	})
 
