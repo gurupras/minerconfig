@@ -185,8 +185,8 @@ func TestSetPool(t *testing.T) {
 		err := json.Unmarshal([]byte(str), &expected)
 		require.Nil(err)
 
-		b := data.([]byte)
-		s := string(b)
+		s := data.(string)
+		b := []byte(s)
 		log.Debugf("Got: \n%v\n", s)
 		var got interface{}
 		err = json.Unmarshal(b, &got)
