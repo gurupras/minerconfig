@@ -31,8 +31,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to create client: %v\n", err)
 		os.Exit(-1)
 	}
+	log.Infof("Connected to server")
+
 	client.AddPoolListeners()
+	log.Infof("Finished setting up listeners")
+
 	client.UpdatePools()
+	log.Infof("Requested get-pools")
 
 	// Wait forever
 	wg := sync.WaitGroup{}
