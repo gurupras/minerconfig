@@ -28,6 +28,7 @@ var pools []Pool
 func RunServer(webserverPath string, port int) *stoppablenetlistener.StoppableNetListener {
 	r := mux.NewRouter()
 	ws := websockets.NewServer(r)
+	ws.UseEvents = true
 
 	ws.On("get-pools", func(w *websockets.WebsocketClient, data interface{}) {
 		str, _ := json.Marshal(pools)
@@ -73,6 +74,11 @@ func RunServer(webserverPath string, port int) *stoppablenetlistener.StoppableNe
 		fmt.Fprintf(os.Stderr, "Failed to get snl: %v\n", err)
 		os.Exit(-1)
 	}
+	go func() {
+		for evt := range ws.EventChan {
+			log.Infof("Websocket event: %v", evt)
+		}
+	}()
 	go func() {
 		server.Serve(snl)
 	}()
