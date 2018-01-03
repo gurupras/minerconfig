@@ -113,7 +113,7 @@ func (c *Client) ResetMiner() error {
 
 func (c *Client) AddPoolListeners() {
 	c.On("pools-update", c.HandlePoolInfo)
-	c.On("get-pools", c.HandlePoolInfo)
+	c.On("get-pools-result", c.HandlePoolInfo)
 }
 
 func (c *Client) UpdatePools() error {

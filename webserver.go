@@ -35,7 +35,7 @@ func RunServer(webserverPath string, port int) *stoppablenetlistener.StoppableNe
 			evt := &websockets.Event{"get-pools", fmt.Sprintf("clientaddr=%v", w.RemoteAddr())}
 			ws.EventChan <- evt
 		}
-		w.Emit("get-pools", pools)
+		w.Emit("get-pools-result", pools)
 	})
 
 	ws.On("set-pools", func(w *websockets.WebsocketClient, data interface{}) {
