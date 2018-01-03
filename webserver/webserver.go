@@ -4,9 +4,9 @@ import (
 	"os"
 	"sync"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/alecthomas/kingpin"
 	"github.com/gurupras/minerconfig"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
