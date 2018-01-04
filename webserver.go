@@ -42,7 +42,8 @@ func RunServer(webserverPath string, port int) *stoppablenetlistener.StoppableNe
 		str := data.(string)
 		status := "unknown"
 		var m map[string]interface{}
-		if err := json.Unmarshal([]byte(str), &m); err != nil {
+		b := []byte(str)
+		if err := json.Unmarshal(b, &m); err != nil {
 			log.Errorf("Failed to set-pools: %v", err)
 			w.Emit("error", fmt.Sprintf("Failed to set-pools: %v", err))
 			status = "failure"
@@ -50,6 +51,9 @@ func RunServer(webserverPath string, port int) *stoppablenetlistener.StoppableNe
 			pools = m["pools"]
 			log.Infof("Successfully executed set-pools!\n")
 			status = "success"
+			for client, _ := range ws.Clients {
+				client.Emit("pools-update", pools)
+			}
 		}
 		if ws.UseEvents {
 			evt := &websockets.Event{"set-pools", fmt.Sprintf("clientaddr=%v status=%v", w.RemoteAddr(), status)}
