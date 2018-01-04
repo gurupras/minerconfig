@@ -121,6 +121,8 @@ func (c *Client) UpdatePools() error {
 }
 
 func (c *Client) StartMiner() error {
+	cmdline := fmt.Sprintf(`%v -c "%v"`, c.BinaryPath, c.tmpConfigPath)
+	log.Infof("cmdline: %v", cmdline)
 	miner := exec.Command(c.BinaryPath, "-c", c.tmpConfigPath)
 	miner.Stdin = os.Stdin
 	miner.Stdout = os.Stdout
