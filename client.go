@@ -80,7 +80,7 @@ func (c *Client) Connect() error {
 func (c *Client) HandlePoolInfo(w *websockets.WebsocketClient, data interface{}) {
 	log.Infof("Received pool info from server")
 	c.Config["pools"] = data
-	if b, err := json.Marshal(c.Config); err != nil {
+	if b, err := json.MarshalIndent(c.Config, "", "  "); err != nil {
 		log.Errorf("Failed to marshal config: %v\n", err)
 	} else {
 		// Stop current miner if it exists
