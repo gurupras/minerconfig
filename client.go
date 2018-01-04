@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"syscall"
 
 	"github.com/gorilla/websocket"
 	"github.com/gurupras/go-easyfiles"
@@ -132,5 +133,9 @@ func (c *Client) StartMiner() error {
 }
 
 func (c *Client) StopMiner() error {
-	return c.miner.Process.Kill()
+	//return c.miner.Process.Kill()
+	if err := c.miner.Process.Signal(syscall.SIGINT); err != nil {
+		return err
+	}
+	return c.miner.Wait()
 }
