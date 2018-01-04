@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/google/shlex"
 	"github.com/gorilla/websocket"
 	"github.com/gurupras/go-easyfiles"
 	"github.com/homesound/simple-websockets"
@@ -122,9 +121,7 @@ func (c *Client) UpdatePools() error {
 }
 
 func (c *Client) StartMiner() error {
-	cmdline := fmt.Sprintf("%v -c %v", c.BinaryPath, c.tmpConfigPath)
-	cmdlineArray, _ := shlex.Split(cmdline)
-	miner := exec.Command(cmdlineArray[0], cmdlineArray[1:]...)
+	miner := exec.Command(c.BinaryPath, "-c", c.tmpConfigPath)
 	miner.Stdin = os.Stdin
 	miner.Stdout = os.Stdout
 	miner.Stderr = os.Stderr
