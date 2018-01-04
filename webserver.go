@@ -23,7 +23,7 @@ type Pool struct {
 	Nicehash  bool   `json:"nicehash"`
 }
 
-var pools []Pool
+var pools interface{}
 
 func RunServer(webserverPath string, port int) *stoppablenetlistener.StoppableNetListener {
 	r := mux.NewRouter()
@@ -41,7 +41,7 @@ func RunServer(webserverPath string, port int) *stoppablenetlistener.StoppableNe
 	ws.On("set-pools", func(w *websockets.WebsocketClient, data interface{}) {
 		str := data.(string)
 		status := "unknown"
-		var m map[string][]Pool
+		var m map[string]interface{}
 		if err := json.Unmarshal([]byte(str), &m); err != nil {
 			log.Errorf("Failed to set-pools: %v", err)
 			w.Emit("error", fmt.Sprintf("Failed to set-pools: %v", err))
