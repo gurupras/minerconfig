@@ -88,7 +88,8 @@ func (c *Client) HandlePoolInfo(w *websockets.WebsocketClient, data interface{})
 	m := data.([]interface{})
 	firstPool := m[0].(map[string]interface{})
 	// TODO: Ideally, the following lines should have checks
-	c.Config["url"] = firstPool["url"]
+	// XXX: Currently, this adds a stratum+tcp:// prefix..this needs to be fixed somehow
+	c.Config["url"] = fmt.Sprintf("stratum+tcp://%v", firstPool["url"])
 	c.Config["user"] = firstPool["user"]
 	c.Config["pass"] = firstPool["pass"]
 
