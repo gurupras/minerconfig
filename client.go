@@ -83,6 +83,15 @@ func (c *Client) Connect() error {
 func (c *Client) HandlePoolInfo(w *websockets.WebsocketClient, data interface{}) {
 	log.Infof("Received pool info from server")
 	c.Config["pools"] = data
+	log.Infof("data type: %t", data)
+	// Override c.Config["url"] to deal with cpuminer-multi
+	m := data.([]interface{})
+	firstPool := m[0].(map[string]interface{})
+	// TODO: Ideally, the following lines should have checks
+	c.Config["url"] = firstPool["url"]
+	c.Config["user"] = firstPool["user"]
+	c.Config["pass"] = firstPool["pass"]
+
 	if b, err := json.MarshalIndent(c.Config, "", "  "); err != nil {
 		log.Errorf("Failed to marshal config: %v\n", err)
 	} else {

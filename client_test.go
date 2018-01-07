@@ -185,9 +185,9 @@ func TestSetPool(t *testing.T) {
 		err := json.Unmarshal([]byte(str), &expected)
 		require.Nil(err)
 
-		s := data.(string)
-		b := []byte(s)
-		log.Debugf("Got: \n%v\n", s)
+		a := data.([]interface{})
+		b, _ := json.Marshal(a)
+		log.Debugf("Got: \n%v\n", a)
 		var got interface{}
 		err = json.Unmarshal(b, &got)
 
@@ -198,7 +198,7 @@ func TestSetPool(t *testing.T) {
 	}
 
 	go c.ProcessMessages()
-	c.On("get-pools", testPools)
+	c.On("get-pools-result", testPools)
 	c.Emit("set-pools", str)
 	c.Emit("get-pools", "{}")
 	wg.Wait()
