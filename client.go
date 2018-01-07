@@ -19,6 +19,7 @@ import (
 type Client struct {
 	*websockets.WebsocketClient
 	BinaryPath       string
+	BinaryIsScript   bool
 	Config           map[string]interface{}
 	tmpConfigPath    string
 	WebserverAddress string
@@ -124,8 +125,14 @@ func (c *Client) UpdatePools() error {
 
 func (c *Client) StartMiner() error {
 	cmdline := fmt.Sprintf(`%v -c "%v"`, c.BinaryPath, c.tmpConfigPath)
+	var miner *exec.Cmd
+	if c.BinaryIsScript {
+		cmdline = fmt.Sprintf("/bin/bash %v", cmdline)
+		miner = exec.Command("/bin/bash", c.BinaryPath, "-c", c.tmpConfigPath)
+	} else {
+		miner = exec.Command(c.BinaryPath, "-c", c.tmpConfigPath)
+	}
 	log.Infof("cmdline: %v", cmdline)
-	miner := exec.Command(c.BinaryPath, "-c", c.tmpConfigPath)
 	miner.Stdin = os.Stdin
 	miner.Stdout = os.Stdout
 	miner.Stderr = os.Stderr

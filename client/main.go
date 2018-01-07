@@ -15,6 +15,7 @@ var (
 	binaryPath = app.Arg("binary-path", "Path to binary to execute").String()
 	baseConfig = app.Arg("base-config", "Base config file to use").String()
 	webserver  = app.Arg("server-address", "Address of server to fetch pool information from").String()
+	isScript   = app.Flag("is-shell-script", "Is binaryPath a shell script?").Short('S').Default("false").Bool()
 	verbose    = app.Flag("verbose", "Enable verbose messages").Short('v').Default("false").Bool()
 )
 
@@ -32,6 +33,8 @@ func main() {
 		os.Exit(-1)
 	}
 	log.Infof("Connected to server")
+
+	client.BinaryIsScript = *isScript
 
 	client.AddPoolListeners()
 	log.Infof("Finished setting up listeners")
