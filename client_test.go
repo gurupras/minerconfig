@@ -120,7 +120,7 @@ func TestBadWebserverAddress(t *testing.T) {
 }
 
 func TestRunServer(t *testing.T) {
-	snl := RunServer("webserver/www", 61117)
+	snl := RunServer("webserver/www", 61118)
 	snl.Stop()
 }
 
@@ -133,10 +133,10 @@ func TestConnect(t *testing.T) {
 	binaryPath := tmpConfig
 
 	// Start webserver
-	snl := RunServer("webserver/www", 61117)
+	snl := RunServer("webserver/www", 61118)
 	defer snl.Stop()
 	time.Sleep(300 * time.Millisecond)
-	c, err := NewClient(binaryPath, tmpConfig, "localhost:61117")
+	c, err := NewClient(binaryPath, tmpConfig, "localhost:61118")
 	require.Nil(err, "Unexpected error", err)
 	require.NotNil(c, "Client should not be nil")
 	logrus.Debugf("Error: %v", err)
@@ -151,10 +151,10 @@ func TestSetPool(t *testing.T) {
 	binaryPath := tmpConfig
 
 	// Start webserver
-	snl := RunServer("webserver/www", 61117)
+	snl := RunServer("webserver/www", 61118)
 	defer snl.Stop()
 	time.Sleep(300 * time.Millisecond)
-	c, err := NewClient(binaryPath, tmpConfig, "localhost:61117")
+	c, err := NewClient(binaryPath, tmpConfig, "localhost:61118")
 	require.Nil(err, "Unexpected error", err)
 	require.NotNil(c, "Client should not be nil")
 	logrus.Debugf("Error: %v", err)
@@ -213,10 +213,10 @@ func TestMiner(t *testing.T) {
 	binaryPath := "dummyminer/dummyminer"
 
 	// Start webserver
-	snl := RunServer("webserver/www", 61117)
+	snl := RunServer("webserver/www", 61118)
 	defer snl.Stop()
 	time.Sleep(300 * time.Millisecond)
-	c, err := NewClient(binaryPath, tmpConfig, "localhost:61117")
+	c, err := NewClient(binaryPath, tmpConfig, "localhost:61118")
 	require.Nil(err, "Unexpected error", err)
 	require.NotNil(c, "Client should not be nil")
 	logrus.Debugf("Error: %v", err)
