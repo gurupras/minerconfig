@@ -2,15 +2,17 @@ package minerconfig
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"sync"
 	"testing"
 	"time"
 
+	yaml "gopkg.in/yaml.v2"
+
 	"github.com/gurupras/go-easyfiles"
 	"github.com/homesound/simple-websockets"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
@@ -79,15 +81,72 @@ func generateConfigFile() (string, error) {
 	}
 }
 
+func checkJson(require *require.Assertions, expected interface{}, got interface{}) {
+	switch expected.(type) {
+	case string:
+		require.Fail("Expected non-string interface")
+	}
+	switch got.(type) {
+	case string:
+		require.Fail("Expected non-string interface")
+	}
+
+	eb, err := json.Marshal(expected)
+	require.Nil(err)
+	expectedStr := string(eb)
+
+	gb, err := json.Marshal(got)
+	require.Nil(err)
+	gotStr := string(gb)
+
+	require.Nil(err)
+	require.Equal(expectedStr, gotStr, fmt.Sprintf("expected: %v\ngot: %v\n", expectedStr, gotStr))
+}
+
+func generateValidClientConfig(require *require.Assertions) *ClientConfig {
+	tmpConfig, err := generateConfigFile()
+	require.Nil(err)
+	binaryPath := tmpConfig
+
+	return &ClientConfig{
+		BinaryPath:       binaryPath,
+		MinerConfigPath:  tmpConfig,
+		WebserverAddress: "localhost:61118",
+	}
+}
+
+func TestParseClientConfig(t *testing.T) {
+	require := require.New(t)
+
+	configStr := `
+binary_path: test
+binary_is_script: false
+miner_config_path: test
+webserver_address: google.com
+`
+
+	var clientConfig ClientConfig
+
+	err := yaml.Unmarshal([]byte(configStr), &clientConfig)
+	require.Nil(err)
+	require.Equal("test", clientConfig.BinaryPath)
+	require.False(clientConfig.BinaryIsScript)
+	require.Equal("test", clientConfig.MinerConfigPath)
+	require.Nil(clientConfig.MinerConfig)
+	require.Equal("google.com", clientConfig.WebserverAddress)
+}
+
 func TestBadBinaryPath(t *testing.T) {
 	require := require.New(t)
 	bp := "/tmp/123414"
 
-	tmpConfig, err := generateConfigFile()
-	require.Nil(err)
-	defer os.Remove(tmpConfig)
+	clientConfig := generateValidClientConfig(require)
+	defer os.Remove(clientConfig.MinerConfigPath)
 
-	c, err := NewClient(bp, tmpConfig, "google.com")
+	// Mess up the binary path
+	clientConfig.BinaryPath = bp
+
+	c, err := NewClient(clientConfig)
 	require.Nil(c, "Client should have been nil")
 	require.NotNil(err, "Expected error")
 }
@@ -95,28 +154,28 @@ func TestBadBinaryPath(t *testing.T) {
 func TestBadConfigPath(t *testing.T) {
 	require := require.New(t)
 
-	tmpConfig, err := generateConfigFile()
-	require.Nil(err)
-	defer os.Remove(tmpConfig)
-	binaryPath := tmpConfig
+	clientConfig := generateValidClientConfig(require)
+	// Remove the file immediately thereby messing up MinerConfigPath
+	defer os.Remove(clientConfig.MinerConfigPath)
 
-	c, err := NewClient(binaryPath, "/tmp/1234", "google.com")
+	clientConfig.MinerConfigPath = "/badpath"
+
+	c, err := NewClient(clientConfig)
 	require.Nil(c, "Client should have been nil")
 	require.NotNil(err, "Expected error")
+	fmt.Printf("Error: %v\n", err)
 }
 
 func TestBadWebserverAddress(t *testing.T) {
 	require := require.New(t)
 
-	tmpConfig, err := generateConfigFile()
-	require.Nil(err)
-	defer os.Remove(tmpConfig)
-	binaryPath := tmpConfig
+	clientConfig := generateValidClientConfig(require)
+	defer os.Remove(clientConfig.MinerConfigPath)
 
-	c, err := NewClient(binaryPath, tmpConfig, "google.com")
+	c, err := NewClient(clientConfig)
 	require.Nil(c, "Client should have been nil")
 	require.NotNil(err, "Expected error")
-	logrus.Debugf("Error: %v", err)
+	log.Debugf("Error: %v", err)
 }
 
 func TestRunServer(t *testing.T) {
@@ -127,99 +186,133 @@ func TestRunServer(t *testing.T) {
 func TestConnect(t *testing.T) {
 	require := require.New(t)
 
-	tmpConfig, err := generateConfigFile()
-	require.Nil(err)
-	defer os.Remove(tmpConfig)
-	binaryPath := tmpConfig
+	clientConfig := generateValidClientConfig(require)
+	defer os.Remove(clientConfig.MinerConfigPath)
 
 	// Start webserver
 	snl := RunServer("webserver/www", 61118)
 	defer snl.Stop()
 	time.Sleep(300 * time.Millisecond)
-	c, err := NewClient(binaryPath, tmpConfig, "localhost:61118")
+	c, err := NewClient(clientConfig)
 	require.Nil(err, "Unexpected error", err)
 	require.NotNil(c, "Client should not be nil")
-	logrus.Debugf("Error: %v", err)
+	log.Debugf("Error: %v", err)
+}
+
+func TestAddPool(t *testing.T) {
+	require := require.New(t)
+
+	clientConfig := generateValidClientConfig(require)
+	defer os.Remove(clientConfig.MinerConfigPath)
+
+	// Start webserver
+	snl := RunServer("webserver/www", 61118)
+	defer snl.Stop()
+	time.Sleep(300 * time.Millisecond)
+	c, err := NewClient(clientConfig)
+	require.Nil(err, "Unexpected error", err)
+	require.NotNil(c, "Client should not be nil")
+	log.Debugf("Error: %v", err)
+
+	str := `
+{
+  "url": "mine.sumo.fairpool.xyz:5555",
+  "user": "Sumoo3U9dFo2CtvGknjrupdw3p2FHqnhJDdqFeErUJLq2zPRMu2sdp1ZqHVooBpmYo9Co1f3xphLZ6jjX5XSuyW3PRMqMERhvuR",
+  "pass": "x",
+  "keepalive": true,
+  "nicehash": false
+}`
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	var got interface{}
+
+	testAvailablePools := func(w *websockets.WebsocketClient, data interface{}) {
+		defer wg.Done()
+		got = data
+	}
+
+	var expected interface{}
+	err = json.Unmarshal([]byte(str), &expected)
+	require.Nil(err)
+
+	go c.ProcessMessages()
+	c.On("new-pool", testAvailablePools)
+	c.Emit("add-pool", str)
+	c.Emit("get-available-pools", nil)
+
+	wg.Wait()
+
+	checkJson(require, expected, got)
 }
 
 func TestSetPool(t *testing.T) {
 	require := require.New(t)
 
-	tmpConfig, err := generateConfigFile()
-	require.Nil(err)
-	defer os.Remove(tmpConfig)
-	binaryPath := tmpConfig
+	clientConfig := generateValidClientConfig(require)
+	defer os.Remove(clientConfig.MinerConfigPath)
 
 	// Start webserver
 	snl := RunServer("webserver/www", 61118)
 	defer snl.Stop()
 	time.Sleep(300 * time.Millisecond)
-	c, err := NewClient(binaryPath, tmpConfig, "localhost:61118")
+	c, err := NewClient(clientConfig)
 	require.Nil(err, "Unexpected error", err)
 	require.NotNil(c, "Client should not be nil")
-	logrus.Debugf("Error: %v", err)
+	log.Debugf("Error: %v", err)
 
 	str := `
-{"pools": [
-		{
-            "url": "mine.sumo.fairpool.xyz:5555",
-			"user": "Sumoo3U9dFo2CtvGknjrupdw3p2FHqnhJDdqFeErUJLq2zPRMu2sdp1ZqHVooBpmYo9Co1f3xphLZ6jjX5XSuyW3PRMqMERhvuR",
-            "pass": "x",
-            "keepalive": true,
-            "nicehash": false
-        },
-		{
-            "url": "pool.sumokoin.hashvault.pro:5555",
-			"user": "Sumoo3U9dFo2CtvGknjrupdw3p2FHqnhJDdqFeErUJLq2zPRMu2sdp1ZqHVooBpmYo9Co1f3xphLZ6jjX5XSuyW3PRMqMERhvuR",
-            "pass": "x",
-            "keepalive": true,
-            "nicehash": false
-        }
-]}`
+{
+  "url": "mine.sumo.fairpool.xyz:5555",
+  "user": "Sumoo3U9dFo2CtvGknjrupdw3p2FHqnhJDdqFeErUJLq2zPRMu2sdp1ZqHVooBpmYo9Co1f3xphLZ6jjX5XSuyW3PRMqMERhvuR",
+  "pass": "x",
+  "keepalive": true,
+  "nicehash": false
+}`
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
+
+	var got interface{}
+
 	testPools := func(w *websockets.WebsocketClient, data interface{}) {
 		defer wg.Done()
-		var expected map[string]interface{}
-		err := json.Unmarshal([]byte(str), &expected)
-		require.Nil(err)
-
-		a := data.([]interface{})
-		b, _ := json.Marshal(a)
-		log.Debugf("Got: \n%v\n", a)
-		var got interface{}
-		err = json.Unmarshal(b, &got)
-
-		expectedStr, _ := json.Marshal(expected["pools"])
-		gotStr, _ := json.Marshal(got)
-		require.Equal(string(expectedStr), string(gotStr))
-		log.Debugf("Pools match")
+		got = data
 	}
 
+	var p interface{}
+	err = json.Unmarshal([]byte(str), &p)
+	require.Nil(err)
+	expected := make([]interface{}, 1)
+	expected[0] = p
+
+	b, _ := json.Marshal(expected)
+
 	go c.ProcessMessages()
-	c.On("get-pools-result", testPools)
-	c.Emit("set-pools", str)
-	c.Emit("get-pools", "{}")
+	c.On("update-selected-pools", testPools)
+	c.Emit("update-selected-pools", string(b))
+
 	wg.Wait()
+
+	checkJson(require, expected, got)
 }
 
 func TestMiner(t *testing.T) {
+	t.Skip()
 	require := require.New(t)
 
-	tmpConfig, err := generateConfigFile()
-	require.Nil(err)
-	defer os.Remove(tmpConfig)
-	binaryPath := "dummyminer/dummyminer"
+	clientConfig := generateValidClientConfig(require)
+	defer os.Remove(clientConfig.MinerConfigPath)
 
 	// Start webserver
 	snl := RunServer("webserver/www", 61118)
 	defer snl.Stop()
 	time.Sleep(300 * time.Millisecond)
-	c, err := NewClient(binaryPath, tmpConfig, "localhost:61118")
+	c, err := NewClient(clientConfig)
 	require.Nil(err, "Unexpected error", err)
 	require.NotNil(c, "Client should not be nil")
-	logrus.Debugf("Error: %v", err)
+	log.Debugf("Error: %v", err)
 
 	err = c.StartMiner()
 	require.Nil(err)
@@ -227,4 +320,10 @@ func TestMiner(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	err = c.StopMiner()
 	require.Nil(err)
+}
+
+func TestMain(m *testing.M) {
+	log.SetLevel(log.WarnLevel)
+	// call flag.Parse() here if TestMain uses flags
+	os.Exit(m.Run())
 }

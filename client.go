@@ -8,7 +8,10 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"syscall"
+
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/gorilla/websocket"
 	"github.com/gurupras/go-easyfiles"
@@ -16,31 +19,47 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Client structure represents a minerconfig client
+// minerconfig Clients are responsible for:
+// 1) Connect to webserver
+// 2) Listen for changes to selected pools
+// 3) Start/Stop the miner
 type Client struct {
+	*ClientConfig
 	*websockets.WebsocketClient
-	BinaryPath       string
-	BinaryIsScript   bool
-	Config           map[string]interface{}
-	tmpConfigPath    string
-	WebserverAddress string
-	miner            *exec.Cmd
+	MinerConfig   *Config
+	tmpConfigPath string
+	miner         *exec.Cmd
 }
 
-func NewClient(binaryPath, configPath, webserver string) (*Client, error) {
+// ClientConfig structure representing the configuration parameters for a
+// minerconfig client
+type ClientConfig struct {
+	BinaryPath       string  `json:"binary_path" yaml:"binary_path"`
+	BinaryIsScript   bool    `json:"binary_is_script" yaml:"binary_is_script"`
+	MinerConfigPath  string  `json:"miner_config_path" yaml:"miner_config_path"`
+	MinerConfig      *Config `json:"miner_config" yaml:"miner_config"`
+	WebserverAddress string  `json:"webserver_address" yaml:"webserver_address"`
+}
+
+// NewClient creates a new minerconfig client
+func NewClient(clientConfig *ClientConfig) (*Client, error) {
 	// First, verify that binary and config paths are valid
+	binaryPath := clientConfig.BinaryPath
+
 	if !easyfiles.Exists(binaryPath) {
 		return nil, fmt.Errorf("Binary path '%v' does not exist!", binaryPath)
 	}
-	if !easyfiles.Exists(configPath) {
-		return nil, fmt.Errorf("Config path '%v' does not exist!", configPath)
-	}
-	var config map[string]interface{}
 
-	if b, err := ioutil.ReadFile(configPath); err != nil {
-		return nil, fmt.Errorf("Failed to read baseConfig file '%v': %v", configPath, err)
-	} else {
-		if err := json.Unmarshal(b, &config); err != nil {
-			return nil, fmt.Errorf("Failed to unmarshal baseConfig to JSON: %v", err)
+	// Read from MinerConfigPath if specified
+	if strings.Compare(clientConfig.MinerConfigPath, "") != 0 {
+		log.Debugf("Reading miner-config from file: '%v'", clientConfig.MinerConfigPath)
+		if b, err := ioutil.ReadFile(clientConfig.MinerConfigPath); err != nil {
+			return nil, fmt.Errorf("Failed to read miner-config file: '%v': %v", clientConfig.MinerConfigPath, err)
+		} else {
+			if err := yaml.Unmarshal(b, &clientConfig.MinerConfig); err != nil {
+				return nil, fmt.Errorf("Failed to parse miner-config file into Config struct: %v", err)
+			}
 		}
 	}
 
@@ -53,10 +72,9 @@ func NewClient(binaryPath, configPath, webserver string) (*Client, error) {
 	tmpConfigFile.Close()
 
 	c := &Client{}
-	c.BinaryPath = binaryPath
-	c.Config = config
+	c.ClientConfig = clientConfig
+	c.MinerConfig = c.ClientConfig.MinerConfig
 	c.tmpConfigPath = tmpConfigPath
-	c.WebserverAddress = webserver
 	// Should we connect here?
 	if err := c.Connect(); err != nil {
 		return nil, fmt.Errorf("Failed to connect to webserver: %v", err)
@@ -65,6 +83,7 @@ func NewClient(binaryPath, configPath, webserver string) (*Client, error) {
 	return c, nil
 }
 
+// Connect to the remote webserver
 func (c *Client) Connect() error {
 	u := url.URL{
 		Scheme: "ws",
@@ -80,20 +99,38 @@ func (c *Client) Connect() error {
 	return nil
 }
 
+// HandlePoolInfo handles the selected-pools data from the server
 func (c *Client) HandlePoolInfo(w *websockets.WebsocketClient, data interface{}) {
 	log.Infof("Received pool info from server")
-	c.Config["pools"] = data
-	log.Infof("data type: %t", data)
-	// Override c.Config["url"] to deal with cpuminer-multi
-	m := data.([]interface{})
-	firstPool := m[0].(map[string]interface{})
+	var b []byte
+	var err error
+	switch data.(type) {
+	case string:
+		b = []byte(data.(string))
+	default:
+		if b, err = json.Marshal(data); err != nil {
+			log.Errorf("Failed to unmarshal JSON data: %v", err)
+			return
+		}
+	}
+	// Now, we have b representing the bytes of data regardless of type
+	// Convert this into []Pool
+	var poolData []Pool
+	if err = json.Unmarshal(b, &poolData); err != nil {
+		log.Errorf("Failed to convert data into []Pool: %v", err)
+		return
+	}
+	c.MinerConfig.Pools = poolData
+	// Override c.MinerConfig.Url to deal with cpuminer-multi
+
+	firstPool := poolData[0]
 	// TODO: Ideally, the following lines should have checks
 	// XXX: Currently, this adds a stratum+tcp:// prefix..this needs to be fixed somehow
-	c.Config["url"] = fmt.Sprintf("stratum+tcp://%v", firstPool["url"])
-	c.Config["user"] = firstPool["user"]
-	c.Config["pass"] = firstPool["pass"]
+	c.MinerConfig.Url = fmt.Sprintf("stratum+tcp://%v", firstPool.Url)
+	c.MinerConfig.User = firstPool.User
+	c.MinerConfig.Pass = firstPool.Pass
 
-	if b, err := json.MarshalIndent(c.Config, "", "  "); err != nil {
+	if b, err := json.MarshalIndent(c.MinerConfig, "", "  "); err != nil {
 		log.Errorf("Failed to marshal config: %v\n", err)
 	} else {
 		// Stop current miner if it exists
@@ -110,12 +147,23 @@ func (c *Client) HandlePoolInfo(w *websockets.WebsocketClient, data interface{})
 	}
 }
 
+// ResetMiner stops current miner (if exists) and starts a new instance
 func (c *Client) ResetMiner() error {
 	if c.miner != nil {
 		if err := c.StopMiner(); err != nil {
 			return fmt.Errorf("Failed to stop miner: %v", err)
 		}
 		c.miner = nil
+	}
+	if c.MinerConfig.ShouldReset {
+		cmdline := c.MinerConfig.ResetScriptPath
+		cmd := exec.Command(cmdline)
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("Failed to run reset script: %v", err)
+		}
+		if err := cmd.Wait(); err != nil {
+			return fmt.Errorf("Failed to wait for reset script to complete: %v", err)
+		}
 	}
 	log.Infof("Starting miner ...")
 	if err := c.StartMiner(); err != nil {
@@ -124,15 +172,18 @@ func (c *Client) ResetMiner() error {
 	return nil
 }
 
+// AddPoolListeners adds the default listeners
 func (c *Client) AddPoolListeners() {
-	c.On("pools-update", c.HandlePoolInfo)
-	c.On("get-pools-result", c.HandlePoolInfo)
+	c.On("update-selected-pools", c.HandlePoolInfo)
+	c.On("get-selected-pools-result", c.HandlePoolInfo)
 }
 
+// UpdatePools requests the server to send back the current set of selected pools
 func (c *Client) UpdatePools() error {
-	return c.Emit("get-pools", "{}")
+	return c.Emit("get-selected-pools", "{}")
 }
 
+// StartMiner starts the miner
 func (c *Client) StartMiner() error {
 	cmdline := fmt.Sprintf(`%v -c "%v"`, c.BinaryPath, c.tmpConfigPath)
 	var miner *exec.Cmd
@@ -150,6 +201,7 @@ func (c *Client) StartMiner() error {
 	return miner.Start()
 }
 
+// StopMiner stops the miner
 func (c *Client) StopMiner() error {
 	//return c.miner.Process.Kill()
 	if runtime.GOOS == "windows" {

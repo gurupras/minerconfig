@@ -4,41 +4,296 @@
 		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 		<!--Import materialize.css-->
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css">
+		<link rel="stylesheet" href="static/css/dragula.min.css">
 
 		<!--Let browser know website is optimized for mobile-->
 		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-		<script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+		<script type="text/javascript" src="static/js/jquery-3.2.1.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script>
 		<script type="text/javascript" src="static/js/msgpack.min.js"></script>
 		<script type="text/javascript" src="static/js/simple-websockets.js"></script>
+		<script type="text/javascript" src="static/js/URI.min.js"></script>
+		<script type="text/javascript" src="static/js/md5.js"></script>
+		<script type="text/javascript" src="static/js/vue-dragula.min.js"></script>
+		<script src="https://unpkg.com/vue"></script>
+
+		<style>
+		.wrapper {
+			display: flex;
+		}
+		.drag-container {
+			display: flex;
+			flex-direction: column;
+			height: 60vh;
+			border-style: solid;
+			border-width: 1px;
+			border-radius: 3px;
+		}
+		.pool-entry {
+			cursor: pointer;
+			margin: 0.2em 0;
+		}
+		.pool-entry:hover {
+			background-color: #25435A;
+			color: #fff;
+		}
+		</style>
 	</head>
 	<body>
-		<div class="container">
-			<div class="row">
-				<div class="col s12 input-field">
-					<code>{"pools": [</code>
-					<textarea id="pools" class="materialize-textarea" style="max-height: 10em; overflow-y: auto;"></textarea>
-					<code>]}</code>
+		<div id="app">
+			<div class="container">
+				<div class="row">
+					<div class="col s3">
+						<div class="row">
+							<div class="col s12">
+								<a href="javascript:void(0)" id="add-pool-btn" class="waves-effect waves-light btn">Add New Pool</a>
+							</div>
+						</div>
+					</div>
 				</div>
-				<p>
-				<a id="submit" class="waves-effect waves-light btn">Submit</a>
-			</div>
-		</div>
 
+				<div class="row">
+					<div class="col s12">
+						<div v-if="availablePools.length > 0">
+							<div class="row">
+								<div class="col s12">
+									<div class="row">
+										<div class="col s6">
+											<h3>Available Pools</h3>
+											<div id="pool-list" class="drag-container" service="poolsService" v-dragula="pools" drake="pools">
+												<div v-for="(pool, index) in pools" class="pool-entry card hoverable" :key="pool.url+pool.user">
+													<div class="card-content">
+														<span class="card-title">{{pool.url}}</span>
+														<p><span class="truncate">user: {{pool.user}}</span>
+														<p><span class="truncate">pass: {{pool.pass}}</span>
+													</div>
+												</div>
+											</div>
+										</div>
+
+										<div class="col s6">
+											<h3>Selected Pools</h3>
+											<div id="selected-pools-list" class="drag-container" service="poolsService" v-dragula="selectedPools" drake="pools">
+												<h5 style="color: grey;" v-if="selectedPools.length === 0">No pools selected. Drag and drop a pool here</h5>
+												<div v-for="(pool, index) in selectedPools" class="pool-entry card hoverable" :key="pool.url+pool.user">
+													<div class="card-content">
+														<span class="card-title">{{pool.url}}</span>
+														<p><span class="truncate">user: {{pool.user}}</span>
+														<p><span class="truncate">pass: {{pool.pass}}</span>
+													</div>
+												</div>
+											</div>
+											<div class="right">
+												<a href="javascript:void(0)" id="update-selected-pools" class="waves-effect waves-light btn"
+														:class="selectedPools.length === 0 ? 'disabled' : ''"
+														@click="updateSelectedPools">Update Selected Pools
+											</a>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div v-else>
+							<h3> No pools available! Add some pools.</h3>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div id="add-pool-modal" class="modal modal-fixed-footer">
+		    <div class="modal-content">
+		      <h4>Add Pool</h4>
+					<div class="row">
+						<div class="col s12 input-field">
+							<textarea id="add-pool" class="materialize-textarea" v-model="pool" :class="[poolError === '' ? 'valid' : 'invalid']" style="overflow-y: auto" @input="validatePool"></textarea>
+							<span id="errors" style="color: red">{{poolError}}</span>
+						</div>
+					</div>
+		    </div>
+		    <div class="modal-footer">
+		      <a href="javascript:void(0)" id="add-pool-submit" class="modal-action modal-close waves-effect waves-light btn" :class="poolError === '' ? '' : 'disabled'" @click="submitPool">Add</a>
+		    </div>
+		  </div>
+		</div>
 <script>
-var socket = new SimpleWebSocket();
-socket.onopen = function() {
-	$('#submit').click(function() {
-			val = $('#pools').val();
-			val = `{"pools": [${val}]}`;
-			var json = JSON.parse(val);
-			socket.emit('set-pools', JSON.stringify(json));
-	});
-	socket.on('error', function(msg) {
-			console.error(`Server returned error ${msg}`);
-	});
-};
-socket.connect();
+
+Vue.use(vueDragula.Vue2Dragula)
+
+var app = new Vue({
+	el: '#app',
+	data: {
+		socket: undefined,
+		pool: undefined,
+		poolError: '',
+		availablePools: [],
+		pools: [],
+		selectedPools: [],
+	},
+	computed: {
+		poolValid: function () {
+			if (this.poolError === '') {
+				return true
+			} else {
+				return false
+			}
+		},
+		filteredPools: function () {
+			availablePoolsDict = {}
+			this.availablePools.forEach(function (pool) {
+				var hash = md5(pool.url + pool.user)
+				availablePoolsDict[hash] = pool
+			})
+			this.selectedPools.forEach(function (pool) {
+				var hash = md5(pool.url + pool.user)
+				if (availablePoolsDict[hash]) {
+					delete availablePoolsDict[hash]
+				}
+			})
+			var pools = []
+			for (var key in availablePoolsDict) {
+				var pool = availablePoolsDict[key]
+				pools.push(pool)
+			}
+			return pools
+		}
+	},
+	watch: {
+	},
+	methods: {
+		updateSelectedPools: function () {
+			this.socket.emit('update-selected-pools', JSON.stringify(this.selectedPools))
+		},
+		getSelectedPools: function () {
+			this.socket.emit('get-selected-pools')
+		},
+		getAvailablePools: function () {
+			this.socket.emit('get-available-pools')
+		},
+		validatePool: function(e) {
+			try {
+				var val = this.pool.trim();
+				var json = JSON.parse(val);
+				try {
+					if (!json.url) {
+						throw `Pool must have 'url' key`
+					}
+					if (!json.user) {
+						throw `Pool must have 'user' key`
+					}
+					if (!json.pass) {
+						throw `Pool must have 'pass' key`
+					}
+				} catch(e) {
+					this.poolError = e
+					return
+				}
+				// If we got here successfully, we have a valid pool
+				this.poolError = ''
+			} catch(e) {
+				this.poolError = 'Not a valid JSON';
+			}
+		},
+		submitPool: function() {
+			var poolStr = this.pool
+			try {
+				var json = JSON.parse(poolStr)
+				// Every pool MUST have url, user, pass fields
+				if(!json.user || !json.url || !json.pass) {
+					throw `Pool must have 'url', 'user' and 'pass' fields`;
+				}
+				this.socket.emit('add-pool', poolStr);
+				console.log('Submitted new pool to server')
+			} catch(e) {
+				console.error(`Invalid JSON: ${e}`);
+			}
+		},
+	},
+	created: function () {
+		this.$dragula.createService({
+      name: 'poolsService',
+      drakes: {
+				pools: {
+					moves: function (el, target, source, sibling) {
+						return $(el).hasClass('pool-entry')
+					},
+					accepts: function (el, target, source, sibling) {
+						return true
+					}
+				}
+      },
+      options: {}
+    })
+		this.$dragula.$service.eventBus.$on('drop', function (data) {
+			var el = data.el
+			var dest = data.container
+			var src = data.source
+		})
+	},
+	mounted: function() {
+		var self = this
+
+		function check () {
+			if(!self.socket || self.socket._websocket.readyState == WebSocket.CLOSED) {
+				setupSocket();
+			}
+		}
+
+		function setupSocket() {
+			return new Promise((resolve, reject) => {
+				var socket = new SimpleWebSocket();
+				self.socket = socket
+				socket.onopen = function() {
+					socket.on('error', function(msg) {
+							console.error(`Server returned error ${msg}`);
+					});
+					socket.on('get-available-pools-result', function (pools) {
+						self.availablePools.splice(0, self.availablePools.length)
+						self.pools.splice(0, self.pools.length)
+						pools.forEach(function (pool) {
+							self.availablePools.push(pool)
+							self.pools.push(pool)
+						})
+						//dragula([document.getElementById('pool-list'), document.getElementById('selected-pools-list')]);
+					})
+
+					socket.on('get-selected-pools-result', function (pools) {
+						self.selectedPools.splice(0, self.selectedPools.length)
+						console.log(`selectedPools: ${JSON.stringify(pools)}`)
+						pools.forEach(function (pool) {
+							debugger
+							for (var idx = 0; idx < self.pools.length; idx++) {
+								var sp = self.pools[idx]
+								if (sp.url === pool.url && sp.user === pool.user) {
+									self.pools.splice(idx, 1)
+								}
+							}
+							self.selectedPools.push(pool)
+						})
+					})
+					socket.on('new-pool', function (pool) {
+						self.availablePools.push(pool)
+					})
+					socket.onclose = function() {
+						check()
+					};
+					resolve(socket)
+				};
+				socket.connect();
+			})
+		}
+		setupSocket().then(() => {
+			self.getAvailablePools()
+			self.getSelectedPools()
+		})
+		setInterval(check, 5000)
+
+		$('#add-pool-modal').modal();
+		$('#add-pool-btn').click(function() {
+			$('#add-pool-modal').modal('open');
+		})
+	}
+})
 </script>
 	</body>
 </html>
