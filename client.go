@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"time"
 
 	yaml "gopkg.in/yaml.v2"
 
@@ -96,6 +97,14 @@ func (c *Client) Connect() error {
 	}
 	client := websockets.NewClient(ws)
 	c.WebsocketClient = client
+
+	// Periodically send messages to server for keepalive
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			c.Emit("keepalive", "{}")
+		}
+	}()
 	return nil
 }
 

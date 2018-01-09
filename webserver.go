@@ -134,6 +134,10 @@ func RunServer(webserverPath string, port int) *stoppablenetlistener.StoppableNe
 		w.Emit("get-selected-pools-result", selectedPools)
 	})
 
+	ws.On("keepalive", func(w *websockets.WebsocketClient, data interface{}) {
+		// do nothing
+	})
+
 	webserverBasePath := webserverPath
 	staticPath := filepath.Join(webserverBasePath, "static") + "/"
 
