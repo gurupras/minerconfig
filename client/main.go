@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"sync"
 
 	yaml "gopkg.in/yaml.v2"
@@ -52,8 +53,10 @@ func main() {
 	}
 	log.Infof("Connected to server")
 
-	// Override TempConfigPath
-	client.TempConfigPath = *tmpConfigPath
+	if strings.Compare(*tmpConfigPath, "") != 0 {
+		// Override TempConfigPath
+		client.TempConfigPath = *tmpConfigPath
+	}
 
 	client.AddPoolListeners()
 	log.Infof("Finished setting up listeners")
