@@ -101,7 +101,7 @@ func RunServer(webserverPath string, port int) *stoppablenetlistener.StoppableNe
 			log.Errorf("[add-pool]: Failed to unmarshal pool: %v", err)
 		}
 		hash := fmt.Sprintf("%X", md5.Sum(poolBytes))
-		poolFile := filepath.Join(poolsDir, hash)
+		poolFile := filepath.Join(poolsDir, fmt.Sprintf("pool-%v", hash))
 		if !easyfiles.Exists(poolFile) {
 			if err := ioutil.WriteFile(poolFile, poolBytes, 0666); err != nil {
 				log.Errorf("Failed to write new pool to file: %v", err)
