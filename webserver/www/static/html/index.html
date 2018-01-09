@@ -176,14 +176,19 @@ var app = new Vue({
 				var val = this.pool.trim();
 				var json = JSON.parse(val);
 				try {
-					if (!json.url) {
-						throw `Pool must have 'url' key`
-					}
-					if (!json.user) {
-						throw `Pool must have 'user' key`
-					}
-					if (!json.pass) {
-						throw `Pool must have 'pass' key`
+					if (json.pools) {
+						// TODO: We're submitting multiple pools..figure out how to handle this
+            // for now, just ignore all errors
+					} else {
+						if (!json.url) {
+							throw `Pool must have 'url' key`
+						}
+						if (!json.user) {
+							throw `Pool must have 'user' key`
+						}
+						if (!json.pass) {
+							throw `Pool must have 'pass' key`
+						}
 					}
 				} catch(e) {
 					this.poolError = e
@@ -196,15 +201,29 @@ var app = new Vue({
 			}
 		},
 		submitPool: function() {
-			var poolStr = this.pool
-			try {
-				var json = JSON.parse(poolStr)
+			var self = this
+			function __submitOnePool(json) {
 				// Every pool MUST have url, user, pass fields
 				if(!json.user || !json.url || !json.pass) {
 					throw `Pool must have 'url', 'user' and 'pass' fields`;
 				}
-				this.socket.emit('add-pool', poolStr);
+				var poolStr = JSON.stringify(json)
+				self.socket.emit('add-pool', poolStr)
 				console.log('Submitted new pool to server')
+			}
+
+			var poolStr = this.pool
+			try {
+				var json = JSON.parse(poolStr)
+				if (json.pools) {
+					// We're submitting multiple pools
+					// Submit each one separately
+					json.pools.forEach(function (pool) {
+						__submitOnePool(pool)
+					})
+				} else {
+					__submitOnePool(json)
+				}
 			} catch(e) {
 				console.error(`Invalid JSON: ${e}`);
 			}
