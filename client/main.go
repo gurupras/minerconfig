@@ -15,9 +15,10 @@ import (
 )
 
 var (
-	app        = kingpin.New("miner-client", "Miner client")
-	configPath = app.Arg("config-path", "Path to YAML configuration").Required().String()
-	verbose    = app.Flag("verbose", "Enable verbose messages").Short('v').Default("false").Bool()
+	app           = kingpin.New("miner-client", "Miner client")
+	configPath    = app.Arg("config-path", "Path to YAML configuration").Required().String()
+	verbose       = app.Flag("verbose", "Enable verbose messages").Short('v').Default("false").Bool()
+	tmpConfigPath = app.Flag("tmp-config-path", "Use a fixed location for the final configuration file").String()
 )
 
 func main() {
@@ -50,6 +51,9 @@ func main() {
 		os.Exit(-1)
 	}
 	log.Infof("Connected to server")
+
+	// Override TempConfigPath
+	client.TempConfigPath = *tmpConfigPath
 
 	client.AddPoolListeners()
 	log.Infof("Finished setting up listeners")

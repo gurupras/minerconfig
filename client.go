@@ -28,9 +28,9 @@ import (
 type Client struct {
 	*ClientConfig
 	*websockets.WebsocketClient
-	MinerConfig   *Config
-	tmpConfigPath string
-	miner         *exec.Cmd
+	MinerConfig    *Config
+	TempConfigPath string
+	miner          *exec.Cmd
 }
 
 // ClientConfig structure representing the configuration parameters for a
@@ -75,7 +75,7 @@ func NewClient(clientConfig *ClientConfig) (*Client, error) {
 	c := &Client{}
 	c.ClientConfig = clientConfig
 	c.MinerConfig = c.ClientConfig.MinerConfig
-	c.tmpConfigPath = tmpConfigPath
+	c.TempConfigPath = tmpConfigPath
 	// Should we connect here?
 	if err := c.Connect(); err != nil {
 		return nil, fmt.Errorf("Failed to connect to webserver: %v", err)
@@ -143,10 +143,10 @@ func (c *Client) HandlePoolInfo(w *websockets.WebsocketClient, data interface{})
 		log.Errorf("Failed to marshal config: %v\n", err)
 	} else {
 		// Stop current miner if it exists
-		// Overwrite tmpConfigPath file
-		// Start miner with -c tmpConfigPath
+		// Overwrite TempConfigPath file
+		// Start miner with -c TempConfigPath
 		log.Infof("Received pools from server")
-		if err := ioutil.WriteFile(c.tmpConfigPath, b, 0666); err != nil {
+		if err := ioutil.WriteFile(c.TempConfigPath, b, 0666); err != nil {
 			log.Errorf("Failed to update config: %v", err)
 			return
 		}
@@ -194,13 +194,13 @@ func (c *Client) UpdatePools() error {
 
 // StartMiner starts the miner
 func (c *Client) StartMiner() error {
-	cmdline := fmt.Sprintf(`%v -c "%v"`, c.BinaryPath, c.tmpConfigPath)
+	cmdline := fmt.Sprintf(`%v -c "%v"`, c.BinaryPath, c.TempConfigPath)
 	var miner *exec.Cmd
 	if c.BinaryIsScript {
 		cmdline = fmt.Sprintf("/bin/bash %v", cmdline)
-		miner = exec.Command("/bin/bash", c.BinaryPath, "-c", c.tmpConfigPath)
+		miner = exec.Command("/bin/bash", c.BinaryPath, "-c", c.TempConfigPath)
 	} else {
-		miner = exec.Command(c.BinaryPath, "-c", c.tmpConfigPath)
+		miner = exec.Command(c.BinaryPath, "-c", c.TempConfigPath)
 	}
 	log.Infof("cmdline: %v", cmdline)
 	miner.Stdin = os.Stdin
