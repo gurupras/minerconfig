@@ -12,7 +12,7 @@ type Config struct {
 	Background     bool        `json:"background" yaml:"background"`
 	Colors         bool        `json:"colors" yaml:"colors"`
 	DonateLevel    float64     `json:"donate-level" yaml:"donate-level"`
-	LogFile        string      `json:"log-file" yaml:"log-file"`
+	LogFile        *string     `json:"log-file" yaml:"log-file"`
 	PrintTime      int         `json:"print-time" yaml:"print-time"`
 	Retries        int         `json:"retries" yaml:"retries"`
 	RetryPause     int         `json:"retry-pause" yaml:"retry-pause"`
@@ -40,11 +40,15 @@ type GPUThread struct {
 
 // Pool structure representing a pool
 type Pool struct {
-	Url       string `json:"url" yaml:"url"`
-	User      string `json:"user" yaml:"user"`
-	Pass      string `json:"pass" yaml:"pass"`
-	Keepalive bool   `json:"keepalive" yaml:"keepalive"`
-	Nicehash  bool   `json:"nicehash" yaml:"nicehash"`
+	Url        string  `json:"url" yaml:"url"`
+	User       string  `json:"user" yaml:"user"`
+	Pass       string  `json:"pass" yaml:"pass"`
+	Keepalive  bool    `json:"keepalive" yaml:"keepalive"`
+	Nicehash   bool    `json:"nicehash" yaml:"nicehash"`
+	Coin       *string `json:"coin" yaml:"coin"`
+	PoolName   *string `json:"pool_name" yaml:"pool_name"`
+	WalletName *string `json:"wallet_name" yaml:"wallet_name"`
+	Label      *string `json:"label" yaml:"label"`
 }
 
 // Hash of this Pool
