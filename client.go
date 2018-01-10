@@ -102,7 +102,11 @@ func (c *Client) Connect() error {
 	go func() {
 		for {
 			time.Sleep(5 * time.Second)
-			c.Emit("keepalive", "{}")
+			if err := c.Emit("keepalive", "{}"); err != nil {
+				if err = c.Connect(); err != nil {
+					log.Errorf("Failed to re-connect to server: %v", err)
+				}
+			}
 		}
 	}()
 	return nil
