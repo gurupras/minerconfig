@@ -64,9 +64,9 @@
 											<div id="pool-list" class="drag-container" service="poolsService" v-dragula="pools" drake="pools">
 												<div v-for="(pool, index) in pools" class="pool-entry card hoverable" :key="pool.url+pool.user">
 													<div class="card-content">
-														<span class="card-title">{{pool.url}}</span>
-														<p><span class="truncate">user: {{pool.user}}</span>
-														<p><span class="truncate">pass: {{pool.pass}}</span>
+														<span class="card-title">{{pool.coin + ' - ' + pool.pool_name + ' - ' + pool.wallet_name}}</span>
+														<p><span class="truncate">url: {{pool.url}}</span>
+														<p><span class="truncate">wallet: {{pool.wallet_name}}</span>
 													</div>
 												</div>
 											</div>
@@ -78,9 +78,9 @@
 												<h5 style="color: grey;" v-if="selectedPools.length === 0">No pools selected. Drag and drop a pool here</h5>
 												<div v-for="(pool, index) in selectedPools" class="pool-entry card hoverable" :key="pool.url+pool.user">
 													<div class="card-content">
-														<span class="card-title">{{pool.url}}</span>
-														<p><span class="truncate">user: {{pool.user}}</span>
-														<p><span class="truncate">pass: {{pool.pass}}</span>
+														<span class="card-title">{{pool.coin + ' - ' + pool.pool_name + ' - ' + pool.wallet_name}}</span>
+														<p><span class="truncate">url: {{pool.url}}</span>
+														<p><span class="truncate">wallet: {{pool.wallet_name}}</span>
 													</div>
 												</div>
 											</div>
