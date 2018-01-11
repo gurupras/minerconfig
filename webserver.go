@@ -84,6 +84,10 @@ func RunServer(webserverPath string, port int) *stoppablenetlistener.StoppableNe
 			log.Errorf("[update-selected-pools]: Failed to unmarshal: %v", err)
 			return
 		}
+		if err := ioutil.WriteFile(selectedPoolsPath, poolBytes, 0666); err != nil {
+			log.Errorf("Failed to write selected pools to file: %v", err)
+		}
+
 		for client, _ := range ws.Clients {
 			client.Emit("update-selected-pools", selectedPools)
 		}
