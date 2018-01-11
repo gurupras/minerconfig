@@ -133,6 +133,12 @@ func (c *Client) HandlePoolInfo(w *websockets.WebsocketClient, data interface{})
 		log.Errorf("Failed to convert data into []Pool: %v", err)
 		return
 	}
+	if len(poolData) == 0 {
+		// The server has no selected pools..wait for it to inform us
+		log.Infof("Server has no selected pool information. Waiting for server to inform us")
+		return
+	}
+
 	c.MinerConfig.Pools = poolData
 	// Override c.MinerConfig.Url to deal with cpuminer-multi
 
