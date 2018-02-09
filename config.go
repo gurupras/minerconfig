@@ -3,6 +3,8 @@ package minerconfig
 import (
 	"crypto/md5"
 	"fmt"
+
+	gputool "github.com/gurupras/minerconfig/gpu-tool"
 )
 
 // Config structure representing config JSON file
@@ -26,8 +28,7 @@ type Config struct {
 	Pass  string `json:"pass" yaml:"pass"`
 	Proxy string `json:"proxy" yaml:"proxy"`
 	// Custom arguments
-	ShouldReset     bool   `json:"should-reset" yaml:"should-reset"`
-	ResetScriptPath string `json:"reset-script-path" yaml:"reset-script-path"`
+	Reset *Reset `json:"reset" yaml:"reset"`
 }
 
 // GPUThread structure representing a GPU thread
@@ -49,6 +50,18 @@ type Pool struct {
 	PoolName   *string `json:"pool_name" yaml:"pool_name"`
 	WalletName *string `json:"wallet_name" yaml:"wallet_name"`
 	Label      *string `json:"label" yaml:"label"`
+}
+
+type Reset struct {
+	ScriptPath       string   `json:"script-path" yaml:"script-path"`
+	DeviceInstanceID string   `json:"device-instance-id" yaml:"device-instance-id"`
+	GPUTool          *GPUTool `json:"gpu-tool" yaml:"gpu-tool"`
+}
+
+type GPUTool struct {
+	Type gputool.GPUToolType    `json:"type" yaml:"type"`
+	Path string                 `json:"path" yaml:"path"`
+	Args map[string]interface{} `json:"args" yaml:"args"`
 }
 
 // Hash of this Pool

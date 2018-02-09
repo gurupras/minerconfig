@@ -16,6 +16,8 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/gurupras/go-easyfiles"
+	gpureset "github.com/gurupras/minerconfig/gpu-reset"
+	gputool "github.com/gurupras/minerconfig/gpu-tool"
 	"github.com/homesound/simple-websockets"
 	log "github.com/sirupsen/logrus"
 )
@@ -173,17 +175,42 @@ func (c *Client) ResetMiner() error {
 			return fmt.Errorf("Failed to stop miner: %v", err)
 		}
 		c.miner = nil
-	}
-	if c.MinerConfig.ShouldReset {
-		cmdline := c.MinerConfig.ResetScriptPath
-		cmd := exec.Command(cmdline)
-		if err := cmd.Start(); err != nil {
-			return fmt.Errorf("Failed to run reset script: %v", err)
-		}
-		if err := cmd.Wait(); err != nil {
-			return fmt.Errorf("Failed to wait for reset script to complete: %v", err)
+		// Remove tmpConfigPath
+		if strings.Compare(c.TempConfigPath, "") != 0 {
+			os.Remove(c.TempConfigPath)
 		}
 	}
+
+	// Check for extra reset logic
+	if c.MinerConfig.Reset != nil {
+		if strings.Compare(c.MinerConfig.Reset.ScriptPath, "") != 0 {
+			cmdline := c.MinerConfig.Reset.ScriptPath
+			cmd := exec.Command(cmdline)
+			if err := cmd.Start(); err != nil {
+				return fmt.Errorf("Failed to run reset script: %v", err)
+			}
+			if err := cmd.Wait(); err != nil {
+				return fmt.Errorf("Failed to wait for reset script to complete: %v", err)
+			}
+		} else {
+			if runtime.GOOS != "windows" {
+				log.Fatalf("Sorry! This is unimeplemented on your OS")
+			}
+			// Get pre-determined properties and figure out how to run them
+			instanceID := c.MinerConfig.Reset.DeviceInstanceID
+			gpuToolConf := c.MinerConfig.Reset.GPUTool
+			gpureset.ResetGPU(instanceID)
+			// Now, we need to run the gpu tool to configure the GPU
+			gpuTool, err := gputool.ParseGPUTool(gpuToolConf.Type)
+			if err != nil {
+				return err
+			}
+			if err := gpuTool.Run(gpuToolConf.Path, gpuToolConf.Args); err != nil {
+				return fmt.Errorf("Failed to run gpu-tool: %v", err)
+			}
+		}
+	}
+
 	log.Infof("Starting miner ...")
 	if err := c.StartMiner(); err != nil {
 		return fmt.Errorf("Failed to start miner: %v", err)
