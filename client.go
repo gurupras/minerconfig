@@ -175,10 +175,10 @@ func (c *Client) ResetMiner() error {
 			return fmt.Errorf("Failed to stop miner: %v", err)
 		}
 		c.miner = nil
-		// Remove tmpConfigPath
-		if strings.Compare(c.TempConfigPath, "") != 0 {
-			os.Remove(c.TempConfigPath)
-		}
+		// // Remove tmpConfigPath
+		// if strings.Compare(c.TempConfigPath, "") != 0 {
+		// 	os.Remove(c.TempConfigPath)
+		// }
 	}
 
 	// Check for extra reset logic
