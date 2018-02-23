@@ -38,6 +38,33 @@
 			background-color: #25435A;
 			color: #fff;
 		}
+
+		#copy-pool:hover {
+			color: #1d7bce;
+			cursor: pointer;
+		}
+		.clipboard {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 1em;
+			height: 1em;
+			padding: 0;
+			border: 'none';
+			outline: 'none';
+			background: 'transparent';
+		}
+		#toast-container {
+			top: auto !important;
+			left: auto !important;
+			bottom: 10%;
+			right:7%;
+			border-radius: 30px;
+		}
+		#toast-container .toast {
+			border-radius: inherit !important;
+		}
+
 		</style>
 	</head>
 	<body>
@@ -63,7 +90,7 @@
 											<h3>Available Pools</h3>
 											<div id="pool-list" class="drag-container" service="poolsService" v-dragula="pools" drake="pools">
 												<div v-for="(pool, index) in pools" class="pool-entry card hoverable" :key="pool.url+pool.user">
-													<div class="card-content">
+													<div class="card-content" :pool="pool" @dblclick="showPool($event, pool)">
 														<span class="card-title">{{pool.coin + ' - ' + pool.pool_name + ' - ' + pool.wallet_name}}</span>
 														<p><span class="truncate">url: {{pool.url}}</span>
 														<p><span class="truncate">wallet: {{pool.wallet_name}}</span>
@@ -77,7 +104,7 @@
 											<div id="selected-pools-list" class="drag-container" service="poolsService" v-dragula="selectedPools" drake="pools">
 												<h5 style="color: grey;" v-if="selectedPools.length === 0">No pools selected. Drag and drop a pool here</h5>
 												<div v-for="(pool, index) in selectedPools" class="pool-entry card hoverable" :key="pool.url+pool.user">
-													<div class="card-content">
+													<div class="card-content" @dblclick="showPool($event, pool)">
 														<span class="card-title">{{pool.coin + ' - ' + pool.pool_name + ' - ' + pool.wallet_name}}</span>
 														<p><span class="truncate">url: {{pool.url}}</span>
 														<p><span class="truncate">wallet: {{pool.wallet_name}}</span>
@@ -116,6 +143,18 @@
 		      <a href="javascript:void(0)" id="add-pool-submit" class="modal-action modal-close waves-effect waves-light btn" :class="poolError === '' ? '' : 'disabled'" @click="submitPool">Add</a>
 		    </div>
 		  </div>
+
+			<div id="show-pool-modal" class="modal modal-fixed-footer">
+		    <div class="modal-content">
+					<div class="row">
+						<div class="col s12">
+							<i id="copy-pool" class="material-icons right" @click="copyPool($event)">content_copy</i>
+							<pre id="show-pool-content">
+							</pre>
+						</div>
+					</div>
+				</div>
+			</div>
 		</div>
 <script>
 
@@ -229,6 +268,18 @@ var app = new Vue({
 				console.error(`Invalid JSON: ${e}`);
 			}
 		},
+		showPool: function (e, pool) {
+			$('#show-pool-modal').modal('open')
+			$('#show-pool-content').html(JSON.stringify(pool, null, 4))
+		},
+		copyPool: function (e) {
+			var $temp = $(`<textarea class="clipboard">`);
+			$("body").append($temp);
+			$temp.val($('#show-pool-content').text()).select();
+			document.execCommand("copy");
+			$temp.remove();
+			Materialize.toast('Copied', 1000)
+		}
 	},
 	created: function () {
 		this.$dragula.createService({
@@ -331,6 +382,8 @@ var app = new Vue({
 		$('#add-pool-btn').click(function() {
 			$('#add-pool-modal').modal('open');
 		})
+
+		$('#show-pool-modal').modal()
 	}
 })
 </script>
