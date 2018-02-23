@@ -107,7 +107,7 @@
 		      <h4>Add Pool</h4>
 					<div class="row">
 						<div class="col s12 input-field">
-							<textarea id="add-pool" class="materialize-textarea" v-model="pool" :class="[poolError === '' ? 'valid' : 'invalid']" style="overflow-y: auto" @input="validatePool"></textarea>
+							<textarea id="add-pool" class="materialize-textarea" rows="25" v-model="pool" :class="[poolError === '' ? 'valid' : 'invalid']" style="overflow-y: auto" @input="validatePool"></textarea>
 							<span id="errors" style="color: red">{{poolError}}</span>
 						</div>
 					</div>
