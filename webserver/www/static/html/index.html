@@ -282,7 +282,6 @@ var app = new Vue({
 						self.selectedPools.splice(0, self.selectedPools.length)
 						console.log(`selectedPools: ${JSON.stringify(pools)}`)
 						pools.forEach(function (pool) {
-							debugger
 							for (var idx = 0; idx < self.pools.length; idx++) {
 								var sp = self.pools[idx]
 								if (sp.url === pool.url && sp.user === pool.user) {
