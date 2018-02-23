@@ -224,6 +224,7 @@ var app = new Vue({
 				} else {
 					__submitOnePool(json)
 				}
+				$('#add-pool').val('')
 			} catch(e) {
 				console.error(`Invalid JSON: ${e}`);
 			}
@@ -308,7 +309,25 @@ var app = new Vue({
 		})
 		setInterval(check, 5000)
 
-		$('#add-pool-modal').modal();
+		$('#add-pool-modal').modal({
+			ready: function () {
+				if ($('#add-pool').val() === '') {
+					// Set up the default format
+					var template = `
+{
+			"url": "",
+			"user": "",
+			"coin": "",
+			"pool_name": "",
+			"wallet_name": "",
+			"keepalive": true,
+			"nicehash": false,
+			"pass": "x"
+}`
+					$('#add-pool').val(template)
+				}
+			}
+		});
 		$('#add-pool-btn').click(function() {
 			$('#add-pool-modal').modal('open');
 		})
