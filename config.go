@@ -20,6 +20,7 @@ type Config struct {
 	RetryPause     int         `json:"retry-pause" yaml:"retry-pause"`
 	Syslog         bool        `json:"syslog" yaml:"syslog"`
 	OpenCLPlatform int         `json:"opencl-platform" yaml:"opencl-platform"`
+	CPUThreads     int         `json:"cpu_threads" yaml:"cpu_threads"`
 	Threads        []GPUThread `json:"threads" yaml:"threads"`
 	Pools          []Pool      `json:"pools" yaml:"pools"`
 	// Arguments to support miners like cpuminer-multi

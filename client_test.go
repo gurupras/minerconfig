@@ -124,6 +124,8 @@ binary_args: ["hello", 1, 4]
 binary_is_script: false
 miner_config_path: test
 webserver_address: google.com
+miner_config:
+  cpu_threads: 4
 `
 
 	var clientConfig ClientConfig
@@ -134,8 +136,9 @@ webserver_address: google.com
 	require.Equal([]interface{}{"hello", 1, 4}, clientConfig.BinaryArgs)
 	require.False(clientConfig.BinaryIsScript)
 	require.Equal("test", clientConfig.MinerConfigPath)
-	require.Nil(clientConfig.MinerConfig)
 	require.Equal("google.com", clientConfig.WebserverAddress)
+
+	require.Equal(4, clientConfig.MinerConfig.CPUThreads)
 }
 
 func TestBadBinaryPath(t *testing.T) {
