@@ -120,6 +120,7 @@ func TestParseClientConfig(t *testing.T) {
 
 	configStr := `
 binary_path: test
+binary_args: ["hello", 1, 4]
 binary_is_script: false
 miner_config_path: test
 webserver_address: google.com
@@ -130,6 +131,7 @@ webserver_address: google.com
 	err := yaml.Unmarshal([]byte(configStr), &clientConfig)
 	require.Nil(err)
 	require.Equal("test", clientConfig.BinaryPath)
+	require.Equal([]interface{}{"hello", 1, 4}, clientConfig.BinaryArgs)
 	require.False(clientConfig.BinaryIsScript)
 	require.Equal("test", clientConfig.MinerConfigPath)
 	require.Nil(clientConfig.MinerConfig)

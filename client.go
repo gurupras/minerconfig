@@ -38,11 +38,12 @@ type Client struct {
 // ClientConfig structure representing the configuration parameters for a
 // minerconfig client
 type ClientConfig struct {
-	BinaryPath       string  `json:"binary_path" yaml:"binary_path"`
-	BinaryIsScript   bool    `json:"binary_is_script" yaml:"binary_is_script"`
-	MinerConfigPath  string  `json:"miner_config_path" yaml:"miner_config_path"`
-	MinerConfig      *Config `json:"miner_config" yaml:"miner_config"`
-	WebserverAddress string  `json:"webserver_address" yaml:"webserver_address"`
+	BinaryPath       string        `json:"binary_path" yaml:"binary_path"`
+	BinaryArgs       []interface{} `json:"binary_args" yaml:"binary_args"`
+	BinaryIsScript   bool          `json:"binary_is_script" yaml:"binary_is_script"`
+	MinerConfigPath  string        `json:"miner_config_path" yaml:"miner_config_path"`
+	MinerConfig      *Config       `json:"miner_config" yaml:"miner_config"`
+	WebserverAddress string        `json:"webserver_address" yaml:"webserver_address"`
 }
 
 // NewClient creates a new minerconfig client
@@ -233,11 +234,30 @@ func (c *Client) UpdatePools() error {
 func (c *Client) StartMiner() error {
 	cmdline := fmt.Sprintf(`%v -c "%v"`, c.BinaryPath, c.TempConfigPath)
 	var miner *exec.Cmd
+	args := make([]string, 0)
+
+	var binaryArgsStr []string
+	if c.BinaryArgs != nil {
+		binaryArgsStr = make([]string, len(c.BinaryArgs))
+		for i := 0; i < len(c.BinaryArgs); i++ {
+			binaryArgsStr[i] = fmt.Sprintf("%v", c.BinaryArgs[i])
+		}
+	}
+
 	if c.BinaryIsScript {
 		cmdline = fmt.Sprintf("/bin/bash %v", cmdline)
-		miner = exec.Command("/bin/bash", c.BinaryPath, "-c", c.TempConfigPath)
+		args = append(args, c.BinaryPath)
+		if c.BinaryArgs != nil {
+			args = append(args, binaryArgsStr...)
+		}
+		args = append(args, []string{"-c", c.TempConfigPath}...)
+		miner = exec.Command("/bin/bash", args...)
 	} else {
-		miner = exec.Command(c.BinaryPath, "-c", c.TempConfigPath)
+		if c.BinaryArgs != nil {
+			args = append(args, binaryArgsStr...)
+		}
+		args = append(args, []string{"-c", c.TempConfigPath}...)
+		miner = exec.Command(c.BinaryPath, args...)
 	}
 	log.Infof("cmdline: %v", cmdline)
 	miner.Stdin = os.Stdin
