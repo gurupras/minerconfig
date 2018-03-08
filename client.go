@@ -232,7 +232,7 @@ func (c *Client) UpdatePools() error {
 
 // StartMiner starts the miner
 func (c *Client) StartMiner() error {
-	cmdline := fmt.Sprintf(`%v -c "%v"`, c.BinaryPath, c.TempConfigPath)
+
 	var miner *exec.Cmd
 	args := make([]string, 0)
 
@@ -243,6 +243,8 @@ func (c *Client) StartMiner() error {
 			binaryArgsStr[i] = fmt.Sprintf("%v", c.BinaryArgs[i])
 		}
 	}
+
+	cmdline := fmt.Sprintf(`%v %v -c "%v"`, c.BinaryPath, strings.Join(binaryArgsStr, " "), c.TempConfigPath)
 
 	if c.BinaryIsScript {
 		cmdline = fmt.Sprintf("/bin/bash %v", cmdline)
@@ -257,6 +259,7 @@ func (c *Client) StartMiner() error {
 			args = append(args, binaryArgsStr...)
 		}
 		args = append(args, []string{"-c", c.TempConfigPath}...)
+		log.Infof("args: %v", args)
 		miner = exec.Command(c.BinaryPath, args...)
 	}
 	log.Infof("cmdline: %v", cmdline)
