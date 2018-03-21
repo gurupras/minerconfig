@@ -198,9 +198,9 @@ func (c *Client) ResetMiner() error {
 				log.Fatalf("Sorry! This is unimeplemented on your OS")
 			}
 			// Get pre-determined properties and figure out how to run them
-			instanceID := c.MinerConfig.Reset.DeviceInstanceID
+			instanceIDs := c.MinerConfig.Reset.DeviceInstanceIDs
 			gpuToolConf := c.MinerConfig.Reset.GPUTool
-			gpureset.ResetGPU(instanceID)
+			gpureset.ResetGPU(instanceIDs)
 			// Now, we need to run the gpu tool to configure the GPU
 			gpuTool, err := gputool.ParseGPUTool(gpuToolConf.Type)
 			if err != nil {

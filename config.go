@@ -54,9 +54,9 @@ type Pool struct {
 }
 
 type Reset struct {
-	ScriptPath       string   `json:"script-path" yaml:"script-path"`
-	DeviceInstanceID string   `json:"device-instance-id" yaml:"device-instance-id"`
-	GPUTool          *GPUTool `json:"gpu-tool" yaml:"gpu-tool"`
+	ScriptPath        string   `json:"script_path" yaml:"script_path"`
+	DeviceInstanceIDs []string   `json:"device_instance_ids" yaml:"device_instance_ids"`
+	GPUTool           *GPUTool `json:"gpu_tool" yaml:"gpu_tool"`
 }
 
 type GPUTool struct {
