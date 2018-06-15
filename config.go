@@ -33,9 +33,32 @@ type Config struct {
 	Reset *Reset `json:"reset" yaml:"reset"`
 }
 
+func (c *Config) Clone() *Config {
+	ret := &Config{}
+	*ret = *c
+	// TODO: LogFile
+
+	ret.Reset = &Reset{}
+	*ret.Reset = *c.Reset
+
+	ret.DeviceInstanceIDs = make([]string, len(c.DeviceInstanceIDs))
+	ret.Reset.DeviceInstanceIDs = ret.DeviceInstanceIDs
+	for idx, val := range c.DeviceInstanceIDs {
+		ret.DeviceInstanceIDs[idx] = val
+	}
+
+	ret.Threads = make([]GPUThread, len(c.Threads))
+	for idx := range c.Threads {
+		t := &GPUThread{}
+		*t = c.Threads[idx]
+		ret.Threads[idx] = *t
+	}
+	return ret
+}
+
 // GPUThread structure representing a GPU thread
 type GPUThread struct {
-	Index       int  `json:"index" yaml:"index"`
+	Index       *int `json:"index" yaml:"index"`
 	DeviceIndex *int `json:"device_index" yaml:"device_index"`
 	Intensity   int  `json:"intensity" yaml:"intensity"`
 	WorkSize    int  `json:"worksize" yaml:"worksize"`

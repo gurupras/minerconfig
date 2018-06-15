@@ -15,7 +15,9 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/gorilla/websocket"
+	mineros "github.com/gurupras/go-cryptonight-miner/miner-os"
 	"github.com/gurupras/go-easyfiles"
+	amdconfig "github.com/gurupras/minerconfig/amd"
 	gpureset "github.com/gurupras/minerconfig/gpu-reset"
 	gputool "github.com/gurupras/minerconfig/gpu-tool"
 	"github.com/homesound/simple-websockets"
@@ -30,9 +32,10 @@ import (
 type Client struct {
 	*ClientConfig
 	*websockets.WebsocketClient
-	MinerConfig    *Config
-	TempConfigPath string
-	miner          *exec.Cmd
+	MinerConfig     *Config
+	origMinerConfig *Config
+	TempConfigPath  string
+	miner           *exec.Cmd
 }
 
 // ClientConfig structure representing the configuration parameters for a
@@ -77,7 +80,8 @@ func NewClient(clientConfig *ClientConfig) (*Client, error) {
 
 	c := &Client{}
 	c.ClientConfig = clientConfig
-	c.MinerConfig = c.ClientConfig.MinerConfig
+	c.origMinerConfig = clientConfig.MinerConfig
+	c.MinerConfig = c.origMinerConfig.Clone()
 	c.TempConfigPath = tmpConfigPath
 	// Should we connect here?
 	if err := c.Connect(); err != nil {
@@ -125,7 +129,7 @@ func (c *Client) HandlePoolInfo(w *websockets.WebsocketClient, data interface{})
 		b = []byte(data.(string))
 	default:
 		if b, err = json.Marshal(data); err != nil {
-			log.Errorf("Failed to unmarshal JSON data: %v", err)
+			log.Errorf("Failed to marshal JSON data: %v", err)
 			return
 		}
 	}
@@ -142,30 +146,66 @@ func (c *Client) HandlePoolInfo(w *websockets.WebsocketClient, data interface{})
 		return
 	}
 
-	c.MinerConfig.Pools = poolData
+	c.MinerConfig = c.origMinerConfig.Clone()
+	minerConfig := c.MinerConfig
+	minerConfig.Pools = poolData
 	// Override c.MinerConfig.Url to deal with cpuminer-multi
 
 	firstPool := poolData[0]
 	// TODO: Ideally, the following lines should have checks
 	// XXX: Currently, this adds a stratum+tcp:// prefix..this needs to be fixed somehow
-	c.MinerConfig.Url = fmt.Sprintf("stratum+tcp://%v", firstPool.Url)
-	c.MinerConfig.User = firstPool.User
-	c.MinerConfig.Pass = firstPool.Pass
+	minerConfig.Url = fmt.Sprintf("stratum+tcp://%v", firstPool.Url)
+	minerConfig.User = firstPool.User
+	minerConfig.Pass = firstPool.Pass
 
-	if b, err := json.MarshalIndent(c.MinerConfig, "", "  "); err != nil {
+	// Stop current miner if it exists
+	// Overwrite TempConfigPath file
+	// Start miner with -c TempConfigPath
+	if err := c.ResetMiner(); err != nil {
+		log.Errorf("Failed to reset miner: %v", err)
+	}
+	// Check to see if every thread has an Index. If not, then we need to parse
+	// DeviceIndex into Index
+	if minerConfig.Threads != nil {
+		for threadIdx := 0; threadIdx < len(minerConfig.Threads); threadIdx++ {
+			threadInfo := minerConfig.Threads[threadIdx]
+			if threadInfo.Index == nil && threadInfo.DeviceIndex == nil {
+				log.Fatalf("Either 'index' or 'device_index' must be present for every thread")
+			}
+			if threadInfo.Index == nil {
+				// We need to convert the DeviceIndex into an OpenCL index
+				instanceId := minerConfig.DeviceInstanceIDs[*threadInfo.DeviceIndex]
+				topology, err := mineros.GetPCITopology(instanceId)
+				if err != nil {
+					log.Fatalf("Failed to get topology for device instance ID '%v': %v\n", instanceId, err)
+				}
+				var openclIdx int
+				openclIdx, err = amdconfig.FindIndexMatchingTopology(topology)
+				if err != nil {
+					log.Fatalf("%v", err)
+				}
+				minerConfig.Threads[threadIdx].Index = &openclIdx
+				log.Infof("Thread-%d: OpenCL index=%d", threadIdx, *minerConfig.Threads[threadIdx].Index)
+			}
+		}
+	}
+
+	b, err = json.MarshalIndent(minerConfig, "", "  ")
+	if err != nil {
 		log.Errorf("Failed to marshal config: %v\n", err)
-	} else {
-		// Stop current miner if it exists
-		// Overwrite TempConfigPath file
-		// Start miner with -c TempConfigPath
-		log.Infof("Received pools from server")
-		if err := ioutil.WriteFile(c.TempConfigPath, b, 0666); err != nil {
-			log.Errorf("Failed to update config: %v", err)
-			return
-		}
-		if err := c.ResetMiner(); err != nil {
-			log.Errorf("Failed to reset miner: %v", err)
-		}
+		return
+	}
+
+	log.Infof("Received pools from server")
+	if err := ioutil.WriteFile(c.TempConfigPath, b, 0666); err != nil {
+		log.Errorf("Failed to update config: %v", err)
+		return
+	}
+
+	log.Infof("Starting miner ...")
+	if err := c.StartMiner(); err != nil {
+		log.Errorf("Failed to start miner: %v", err)
+		return
 	}
 }
 
@@ -212,10 +252,6 @@ func (c *Client) ResetMiner() error {
 		}
 	}
 
-	log.Infof("Starting miner ...")
-	if err := c.StartMiner(); err != nil {
-		return fmt.Errorf("Failed to start miner: %v", err)
-	}
 	return nil
 }
 
