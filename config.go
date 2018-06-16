@@ -38,20 +38,26 @@ func (c *Config) Clone() *Config {
 	*ret = *c
 	// TODO: LogFile
 
-	ret.Reset = &Reset{}
-	*ret.Reset = *c.Reset
+	if c.Reset != nil {
+		ret.Reset = &Reset{}
+		*ret.Reset = *c.Reset
+	}
 
 	ret.DeviceInstanceIDs = make([]string, len(c.DeviceInstanceIDs))
-	ret.Reset.DeviceInstanceIDs = ret.DeviceInstanceIDs
+	if ret.Reset != nil {
+		ret.Reset.DeviceInstanceIDs = ret.DeviceInstanceIDs
+	}
 	for idx, val := range c.DeviceInstanceIDs {
 		ret.DeviceInstanceIDs[idx] = val
 	}
 
-	ret.Threads = make([]GPUThread, len(c.Threads))
-	for idx := range c.Threads {
-		t := &GPUThread{}
-		*t = c.Threads[idx]
-		ret.Threads[idx] = *t
+	if c.Threads != nil {
+		ret.Threads = make([]GPUThread, len(c.Threads))
+		for idx := range c.Threads {
+			t := &GPUThread{}
+			*t = c.Threads[idx]
+			ret.Threads[idx] = *t
+		}
 	}
 	return ret
 }
