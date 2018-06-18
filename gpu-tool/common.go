@@ -7,6 +7,7 @@ type GPUToolType string
 const (
 	GPU_TOOL_MSI_AB          GPUToolType = "MSI-AB"
 	GPU_TOOL_OVERDRIVE_NTOOL GPUToolType = "ODNT"
+	GPU_TOOL_SCRIPT          GPUToolType = "SCRIPT"
 )
 
 type GPUToolInterface interface {
@@ -19,6 +20,8 @@ func ParseGPUTool(toolType GPUToolType) (GPUToolInterface, error) {
 		return &MSIAfterBurner{}, nil
 	case GPU_TOOL_OVERDRIVE_NTOOL:
 		return &OverdriveNTool{}, nil
+	case GPU_TOOL_SCRIPT:
+		return &ScriptTool{}, nil
 	default:
 		return nil, fmt.Errorf("Unimplemented GPUTool: %v", toolType)
 	}
