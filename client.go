@@ -157,6 +157,7 @@ func (c *Client) HandlePoolInfo(w *websockets.WebsocketClient, data interface{})
 	minerConfig.Url = fmt.Sprintf("stratum+tcp://%v", firstPool.Url)
 	minerConfig.User = firstPool.User
 	minerConfig.Pass = firstPool.Pass
+	minerConfig.Algorithm = firstPool.Algorithm
 
 	// Stop current miner if it exists
 	// Overwrite TempConfigPath file

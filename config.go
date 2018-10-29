@@ -73,6 +73,7 @@ type GPUThread struct {
 
 // Pool structure representing a pool
 type Pool struct {
+	Algorithm  string  `json:"algorithm" yaml:"algorithm"`
 	Url        string  `json:"url" yaml:"url"`
 	User       string  `json:"user" yaml:"user"`
 	Pass       string  `json:"pass" yaml:"pass"`
