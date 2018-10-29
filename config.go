@@ -63,12 +63,28 @@ func (c *Config) Clone() *Config {
 }
 
 // GPUThread structure representing a GPU thread
+type StandardGPUThread struct {
+	Intensity    int `json:"intensity" yaml:"intensity"`
+	WorkSize     int `json:"worksize" yaml:"worksize"`
+	StridedIndex int `json:"strided_index" yaml:"strided_index"`
+	MemChunk     int `json:"mem_chunk" yaml:"mem_chunk"`
+	Unroll       int `json:"unroll" yaml:"unroll"`
+	CompMode     int `json:"comp_mode" yaml:"comp_mode"`
+}
+
+type HIPGPUThread struct {
+	Threads int `json:"threads" yaml:"threads"`
+	Blocks  int `json:"blocks" yaml:"blocks"`
+	BFactor int `json:"bfactor" yaml:"bfactor"`
+	BSleep  int `json:"bsleep" yaml:"bsleep"`
+}
+
 type GPUThread struct {
-	Index       *int `json:"index" yaml:"index"`
-	DeviceIndex *int `json:"device_index" yaml:"device_index"`
-	Intensity   int  `json:"intensity" yaml:"intensity"`
-	WorkSize    int  `json:"worksize" yaml:"worksize"`
-	AffineToCPU bool `json:"affine_to_cpu" yaml:"affine_to_cpu"`
+	StandardGPUThread `yaml:",inline"`
+	HIPGPUThread      `yaml:",inline"`
+	Index              *int `json:"index" yaml:"index"`
+	DeviceIndex        *int `json:"device_index" yaml:"device_index"`
+	AffineToCPU        bool `json:"affine_to_cpu" yaml:"affine_to_cpu"`
 }
 
 // Pool structure representing a pool

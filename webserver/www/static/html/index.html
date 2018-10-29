@@ -228,6 +228,9 @@ var app = new Vue({
 						if (!json.pass) {
 							throw `Pool must have 'pass' key`
 						}
+						if (!json.algorithm) {
+							throw `Pool must have 'algorithm' key`
+						}
 					}
 				} catch(e) {
 					this.poolError = e
@@ -243,8 +246,8 @@ var app = new Vue({
 			var self = this
 			function __submitOnePool(json) {
 				// Every pool MUST have url, user, pass fields
-				if(!json.user || !json.url || !json.pass) {
-					throw `Pool must have 'url', 'user' and 'pass' fields`;
+				if(!json.user || !json.url || !json.pass || !json.algorithm) {
+					throw `Pool must have 'url', 'user', 'pass' and 'algorithm' fields`;
 				}
 				var poolStr = JSON.stringify(json)
 				self.socket.emit('add-pool', poolStr)
